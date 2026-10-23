@@ -37,6 +37,40 @@
   services.displayManager.gdm.enable = true;
   services.desktopManager.gnome.enable = true;
 
+  # --- GPU: Intel Iris Xe (display) + NVIDIA RTX 3060 (offload) ---
+  # "modesetting" is the Intel driver; listing "nvidia" loads the proprietary
+  # module and keeps nouveau out. This is needed on Wayland too.
+  services.xserver.videoDrivers = [ "modesetting" "nvidia" ];
+
+  hardware.graphics = {
+    enable = true;
+    enable32Bit = true; # Steam/Wine; remove if not needed
+    extraPackages = with pkgs; [
+      intel-media-driver # VA-API for the Iris Xe
+    ];
+  };
+
+  hardware.nvidia = {
+    modesetting.enable = true;
+    open = true; # Ampere (RTX 30xx) supports the open kernel modules
+    nvidiaSettings = true;
+    package = config.boot.kernelPackages.nvidiaPackages.stable;
+
+    # Lets the dGPU power down fully when idle (needs offload mode)
+    powerManagement.enable = true;
+    powerManagement.finegrained = true;
+
+    prime = {
+      offload = {
+        enable = true;
+        enableOffloadCmd = true; # provides the `nvidia-offload` wrapper
+      };
+      intelBusId = "PCI:0:2:0";
+      nvidiaBusId = "PCI:1:0:0";
+    };
+  };
+  # --- end GPU ---
+
   # Configure keymap in X11
   services.xserver.xkb = {
     layout = "us";
